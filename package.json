@@ -48,7 +48,7 @@
 	"homepage": "https://github.com/LitoMore/native-say#readme",
 	"dependencies": {
 		"execa": "^9.6.1",
-		"fkill": "^10.0.3",
+		"fkill": "^7.2.1",
 		"tasklist": "^6.0.0"
 	},
 	"devDependencies": {

@@ -1,0 +1,61 @@
+{
+	"name": "native-say",
+	"version": "0.0.0",
+	"description": "Native text-to-speech for macOS and Windows",
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./distribution/source/index.d.ts",
+			"default": "./distribution/source/index.js"
+		},
+		"./mac": {
+			"types": "./distribution/source/mac.d.ts",
+			"default": "./distribution/source/mac.js"
+		},
+		"./windows": {
+			"types": "./distribution/source/windows.d.ts",
+			"default": "./distribution/source/windows.js"
+		}
+	},
+	"types": "distribution/source/index.d.ts",
+	"sideEffects": false,
+	"files": [
+		"distribution/source"
+	],
+	"scripts": {
+		"prepublishOnly": "node --run build",
+		"build": "del-cli distribution && tsgo",
+		"dev": "del-cli distribution && tsgo --watch",
+		"test": "xo"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/LitoMore/native-say.git"
+	},
+	"keywords": [
+		"say",
+		"macos",
+		"windows",
+		"spoken-content",
+		"text-to-speech",
+		"speech"
+	],
+	"author": "LitoMore",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/LitoMore/native-say/issues"
+	},
+	"homepage": "https://github.com/LitoMore/native-say#readme",
+	"dependencies": {
+		"execa": "^9.6.1",
+		"fkill": "^10.0.3",
+		"tasklist": "^6.0.0"
+	},
+	"devDependencies": {
+		"@sindresorhus/tsconfig": "^8.1.0",
+		"@types/node": "^25.6.0",
+		"@typescript/native-preview": "^7.0.0-dev.20260415.1",
+		"del-cli": "^7.0.0",
+		"xo": "^2.0.2"
+	}
+}

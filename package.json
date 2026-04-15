@@ -1,6 +1,6 @@
 {
 	"name": "native-say",
-	"version": "0.0.0",
+	"version": "0.0.1",
 	"description": "Native text-to-speech for macOS and Windows",
 	"type": "module",
 	"exports": {

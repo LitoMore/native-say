@@ -8,7 +8,12 @@ import {
 	say as backendSay,
 } from './backends/windows.js';
 import type {
-	DataFormat, Device, FileFormat, WindowsSayOptions, WindowsSayProcess, WindowsVoice,
+	DataFormat,
+	Device,
+	FileFormat,
+	WindowsSayOptions,
+	WindowsSayProcess,
+	WindowsVoice,
 } from './types.js';
 
 export const say = async (text: string, options: WindowsSayOptions = {}) => backendSay(text, options);

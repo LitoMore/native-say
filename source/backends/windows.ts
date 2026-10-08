@@ -3,7 +3,12 @@ import process from 'node:process';
 import {type Subprocess, execa} from 'execa';
 import {type DefaultTask, tasklist} from 'tasklist';
 import type {
-	DataFormat, Device, FileFormat, SayOptions, WindowsSayProcess, WindowsVoice,
+	DataFormat,
+	Device,
+	FileFormat,
+	SayOptions,
+	WindowsSayProcess,
+	WindowsVoice,
 } from '../types.js';
 
 const powershellCommand = 'powershell.exe';
@@ -14,6 +19,8 @@ const killSignals = new Set(['SIGKILL', 'SIGTERM']);
 const runningPowerShellProcesses = new Map<number, Subprocess>();
 
 let runningPowerShellPid: number | undefined;
+
+const isNonEmptyString = (value: string | undefined): value is string => typeof value === 'string' && value !== '';
 
 const escapePowerShellString = (value: string) => `'${value.replaceAll('\'', '\'\'')}'`;
 
@@ -26,7 +33,7 @@ export const runPowerShell = async (
 	const subprocess = execa(powershellCommand, [...powershellArguments, options.track ? `# ${winSayMarker}\n${command}` : command], {
 		env: {
 			...process.env,
-			...(options.track ? {[winSayMarker]: '1'} : {}),
+			...(options.track && {[winSayMarker]: '1'}),
 		},
 		reject: false,
 	});
@@ -40,14 +47,14 @@ export const runPowerShell = async (
 
 	try {
 		const result = await subprocess;
-		if (result.exitCode === 0 || (result.signal && killSignals.has(result.signal))) {
+		if (result.exitCode === 0 || (result.signal !== undefined && killSignals.has(result.signal))) {
 			return {
 				stdout: result.stdout,
 				stderr: result.stderr,
 			};
 		}
 
-		throw new Error(result.stderr || `${powershellCommand} exited with code ${result.exitCode ?? 'unknown'}`);
+		throw new Error(result.stderr === '' ? `${powershellCommand} exited with code ${result.exitCode ?? 'unknown'}` : result.stderr);
 	} finally {
 		if (options.track && subprocess.pid !== undefined) {
 			runningPowerShellProcesses.delete(subprocess.pid);
@@ -76,10 +83,10 @@ export async function say(text: string, options: SayOptions = {}) {
 
 	const {voice, rate, volume, outputFile} = options;
 	const script = createSpeechSynthesizerScript(`
-	${voice ? `$synthesizer.SelectVoice(${escapePowerShellString(voice)})` : ''}
+	${isNonEmptyString(voice) ? `$synthesizer.SelectVoice(${escapePowerShellString(voice)})` : ''}
 	${rate === undefined ? '' : `$synthesizer.Rate = ${rate}`}
 	${volume === undefined ? '' : `$synthesizer.Volume = ${volume}`}
-	${outputFile ? `$synthesizer.SetOutputToWaveFile(${escapePowerShellString(resolve(outputFile))})` : '$synthesizer.SetOutputToDefaultAudioDevice()'}
+	${isNonEmptyString(outputFile) ? `$synthesizer.SetOutputToWaveFile(${escapePowerShellString(resolve(outputFile))})` : '$synthesizer.SetOutputToDefaultAudioDevice()'}
 	$synthesizer.Speak(${escapePowerShellString(text)})
 `);
 
@@ -101,7 +108,7 @@ export const getVoices = async () => {
 	} | ConvertTo-Json -Compress
 `));
 
-	if (!stdout.trim()) {
+	if (stdout.trim() === '') {
 		return [];
 	}
 
@@ -172,6 +179,8 @@ const getRunningSayProcesses = async (): Promise<WindowsSayProcess[]> => {
 		processMap.set(sayProcess.pid, sayProcess);
 	}
 
+	// Iterator#toArray() requires Node.js 22; preserve Node.js 20 compatibility.
+	// eslint-disable-next-line unicorn/prefer-iterator-to-array
 	return [...processMap.values()];
 };
 
@@ -225,10 +234,10 @@ Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe'" | Where-Object {
 	});
 
 	if (result.exitCode !== 0) {
-		throw new Error(result.stderr || `${powershellCommand} exited with code ${result.exitCode ?? 'unknown'}`);
+		throw new Error(result.stderr === '' ? `${powershellCommand} exited with code ${result.exitCode ?? 'unknown'}` : result.stderr);
 	}
 
-	if (!result.stdout.trim()) {
+	if (result.stdout.trim() === '') {
 		return [];
 	}
 
@@ -250,19 +259,19 @@ const isMarkedPowerShellProcess = (value: unknown): value is {
 	name: string;
 	command: string;
 } => {
-	if (!value || typeof value !== 'object') {
+	if (value === null || typeof value !== 'object') {
 		return false;
 	}
 
 	const processInfo = value as Partial<Record<'command' | 'name' | 'pid', unknown>>;
 	return typeof processInfo.pid === 'number'
-		&& Number.isInteger(processInfo.pid)
+		&& Number.isSafeInteger(processInfo.pid)
 		&& typeof processInfo.name === 'string'
 		&& typeof processInfo.command === 'string';
 };
 
 const isVoice = (value: unknown): value is WindowsVoice => {
-	if (!value || typeof value !== 'object') {
+	if (value === null || typeof value !== 'object') {
 		return false;
 	}
 

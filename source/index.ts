@@ -4,7 +4,12 @@ import type {Backend} from './backends/types.js';
 import * as unsupported from './backends/unsupported.js';
 import * as windows from './backends/windows.js';
 import type {
-	DataFormat, Device, FileFormat, SayOptions, SayProcess, Voice,
+	DataFormat,
+	Device,
+	FileFormat,
+	SayOptions,
+	SayProcess,
+	Voice,
 } from './types.js';
 
 const getBackend = (): Backend => {
@@ -12,11 +17,7 @@ const getBackend = (): Backend => {
 		return macos;
 	}
 
-	if (process.platform === 'win32') {
-		return windows;
-	}
-
-	return unsupported;
+	return process.platform === 'win32' ? windows : unsupported;
 };
 
 export const say = async (text: string, options: SayOptions = {}) => getBackend().say(text, options);

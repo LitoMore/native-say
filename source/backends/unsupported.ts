@@ -1,6 +1,11 @@
 import process from 'node:process';
 import type {
-	DataFormat, Device, FileFormat, SayOptions, SayProcess, Voice,
+	DataFormat,
+	Device,
+	FileFormat,
+	SayOptions,
+	SayProcess,
+	Voice,
 } from '../types.js';
 
 const createUnsupportedPlatformError = () => new Error(`native-say supports macOS and Windows only. Current platform: ${process.platform}`);

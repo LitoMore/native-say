@@ -2,6 +2,11 @@
 	"name": "native-say",
 	"version": "0.0.3",
 	"description": "Native text-to-speech for macOS and Windows",
+	"license": "MIT",
+	"repository": "github:LitoMore/native-say",
+	"homepage": "https://github.com/LitoMore/native-say#readme",
+	"bugs": "https://github.com/LitoMore/native-say/issues",
+	"author": "LitoMore",
 	"type": "module",
 	"exports": {
 		".": {
@@ -17,21 +22,19 @@
 			"default": "./distribution/source/windows.js"
 		}
 	},
-	"types": "distribution/source/index.d.ts",
 	"sideEffects": false,
+	"engines": {
+		"node": ">=20.5"
+	},
+	"scripts": {
+		"prepublishOnly": "node --run build",
+		"build": "del-cli distribution && tsc",
+		"dev": "del-cli distribution && tsc --watch",
+		"test": "xo"
+	},
 	"files": [
 		"distribution/source"
 	],
-	"scripts": {
-		"prepublishOnly": "node --run build",
-		"build": "del-cli distribution && tsgo",
-		"dev": "del-cli distribution && tsgo --watch",
-		"test": "xo"
-	},
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/LitoMore/native-say.git"
-	},
 	"keywords": [
 		"say",
 		"macos",
@@ -40,12 +43,6 @@
 		"text-to-speech",
 		"speech"
 	],
-	"author": "LitoMore",
-	"license": "MIT",
-	"bugs": {
-		"url": "https://github.com/LitoMore/native-say/issues"
-	},
-	"homepage": "https://github.com/LitoMore/native-say#readme",
 	"dependencies": {
 		"execa": "^9.6.1",
 		"fkill": "^7.2.1",
@@ -54,8 +51,9 @@
 	"devDependencies": {
 		"@sindresorhus/tsconfig": "^8.1.0",
 		"@types/node": "^25.6.0",
-		"@typescript/native-preview": "^7.0.0-dev.20260415.1",
+		"@typescript/native": "npm:typescript@^7.0.2",
 		"del-cli": "^7.0.0",
-		"xo": "^2.0.2"
+		"typescript": "npm:@typescript/typescript6@^6.0.2",
+		"xo": "^5.0.1"
 	}
 }

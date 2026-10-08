@@ -8,7 +8,12 @@ import {
 	say as backendSay,
 } from './backends/macos.js';
 import type {
-	DataFormat, Device, FileFormat, MacSayOptions, MacSayProcess, MacVoice,
+	DataFormat,
+	Device,
+	FileFormat,
+	MacSayOptions,
+	MacSayProcess,
+	MacVoice,
 } from './types.js';
 
 export const say = async (text: string, options: MacSayOptions = {}) => backendSay(text, options);

@@ -1,5 +1,10 @@
 import type {
-	DataFormat, Device, FileFormat, SayOptions, SayProcess, Voice,
+	DataFormat,
+	Device,
+	FileFormat,
+	SayOptions,
+	SayProcess,
+	Voice,
 } from '../types.js';
 
 export type Backend = {

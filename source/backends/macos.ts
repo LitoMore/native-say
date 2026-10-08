@@ -2,20 +2,27 @@ import {basename} from 'node:path';
 import {execa} from 'execa';
 import fkill from 'fkill';
 import type {
-	DataFormat, Device, FileFormat, MacSayProcess, MacVoice, SayOptions,
+	DataFormat,
+	Device,
+	FileFormat,
+	MacSayProcess,
+	MacVoice,
+	SayOptions,
 } from '../types.js';
 
 const sayCommand = 'say';
-const audioDeviceLinePattern = /^(?<id>\d+) +(?<name>.+)$/v;
-const dataFormatPattern = /^(?<format>[a-z]+ +(?<description>.+))$/v;
-const fileFormatPattern = /^(?<format>[a-zA-Z\d]+) +(?<description>.+[^ ]) +\((?<extensions>(\.[a-z\d]+,*)+)\) +\[(?<accFormats>(([a-z\d]+,*)+))\]$/v;
-const voiceLinePattern = /^(?<name>.+[^ ]) +(?<languageCode>[a-z]{2}_[A-Z\d]{2,}) +# (?<example>.+)$/v;
+const audioDeviceLinePattern = /^(?<id>\d+) +(?<name>[^ ].*)$/v;
+const dataFormatPattern = /^(?<format>[a-z]+ +(?<description>[^ ].*))$/v;
+const fileFormatPattern = /^(?<format>[\dA-Za-z]+) +(?<description>(?!\(\.)[^ ]+(?: +(?!\(\.)[^ ]+)*) +\((?<extensions>\.[\da-z]+(?:,\.[\da-z]+)*)\) +\[(?<accFormats>[\da-z]+(?:,[\da-z]+)*)\]$/v;
+const voiceLinePattern = /^(?<name>.+[^ ]) +(?<languageCode>[a-z]{2}_[\dA-Z]{2,}) +# (?<example>.+)$/v;
 const killSignals = new Set(['SIGKILL', 'SIGTERM']);
 
 let runningSayPid: number | undefined;
 
-export const parseLine
-	= <T>(
+const isNonEmptyString = (value: string | undefined): value is string => typeof value === 'string' && value !== '';
+
+export const parseLine =
+	<T>(
 		pattern: RegExp,
 		options?: {
 			groupsParser?: (groups: Record<keyof T, string>) => T;
@@ -24,14 +31,8 @@ export const parseLine
 		(line: string) => {
 			const match = pattern.exec(line.trim());
 			if (match) {
-				// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
 				const groups = {...(match.groups as Record<keyof T, string>)};
-				if (options?.groupsParser) {
-					return options.groupsParser(groups);
-				}
-
-				// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-				return groups as T;
+				return options?.groupsParser ? options.groupsParser(groups) : (groups as T);
 			}
 
 			return undefined;
@@ -73,13 +74,13 @@ export async function say(text: string, options: SayOptions = {}) {
 		sayCommand,
 		[
 			text.startsWith('-') ? ` ${text}` : text,
-			voice ? ['--voice', voice] : [],
+			isNonEmptyString(voice) ? ['--voice', voice] : [],
 			rate === undefined ? [] : ['--rate', rate.toString()],
-			audioDevice ? ['--audio-device', audioDevice] : [],
+			isNonEmptyString(audioDevice) ? ['--audio-device', audioDevice] : [],
 			quality === undefined ? [] : ['--quality', quality.toString()],
-			inputFile ? ['--input-file', inputFile] : [],
-			outputFile ? ['--output-file', outputFile] : [],
-			networkSend ? ['--network-send', networkSend] : [],
+			isNonEmptyString(inputFile) ? ['--input-file', inputFile] : [],
+			isNonEmptyString(outputFile) ? ['--output-file', outputFile] : [],
+			isNonEmptyString(networkSend) ? ['--network-send', networkSend] : [],
 			channels === undefined ? [] : ['--channels', channels.toString()],
 		].flat(),
 		{
@@ -90,11 +91,11 @@ export async function say(text: string, options: SayOptions = {}) {
 
 	try {
 		const result = await subprocess;
-		if (result.exitCode === 0 || (result.signal && killSignals.has(result.signal))) {
+		if (result.exitCode === 0 || (result.signal !== undefined && killSignals.has(result.signal))) {
 			return;
 		}
 
-		throw new Error(result.stderr || `${sayCommand} exited with code ${result.exitCode ?? 'unknown'}`);
+		throw new Error(result.stderr === '' ? `${sayCommand} exited with code ${result.exitCode ?? 'unknown'}` : result.stderr);
 	} finally {
 		if (runningSayPid === subprocess.pid) {
 			runningSayPid = undefined;
@@ -113,16 +114,12 @@ export const checkIfSayIsRunning = async (): Promise<MacSayProcess | undefined> 
 	const {stdout, exitCode} = await execa('pgrep', ['-x', sayCommand], {
 		reject: false,
 	});
-	if (exitCode !== 0 || !stdout.trim()) {
+	if (exitCode !== 0 || stdout.trim() === '') {
 		return undefined;
 	}
 
-	const pid = Number(stdout.trim().split('\n')[0]);
-	if (!Number.isInteger(pid)) {
-		return undefined;
-	}
-
-	return getSayProcessByPid(pid);
+	const pid = Number(stdout.trim().split('\n', 1)[0]);
+	return Number.isSafeInteger(pid) ? getSayProcessByPid(pid) : undefined;
 };
 
 export const killRunningSay = async () => {
@@ -137,11 +134,11 @@ const getSayProcessByPid = async (pid: number): Promise<MacSayProcess | undefine
 		reject: false,
 	});
 	const command = stdout.trim();
-	if (exitCode !== 0 || !command) {
+	if (exitCode !== 0 || command === '') {
 		return undefined;
 	}
 
-	const name = basename(command.split(/\s+/v)[0] ?? sayCommand);
+	const name = basename(command.split(/\s+/v, 1)[0] ?? sayCommand);
 	if (name !== sayCommand) {
 		return undefined;
 	}

@@ -1,7 +1,6 @@
 import {resolve} from 'node:path';
 import process from 'node:process';
-import {execa} from 'execa';
-import fkill from 'fkill';
+import {type Subprocess, execa} from 'execa';
 import {type DefaultTask, tasklist} from 'tasklist';
 import type {
 	DataFormat, Device, FileFormat, SayOptions, WindowsSayProcess, WindowsVoice,
@@ -12,6 +11,7 @@ const powershellArguments = ['-NoLogo', '-NoProfile', '-NonInteractive', '-Execu
 const winSayMarker = 'NATIVE_SAY_TTS_PROCESS';
 const markerLookupEnvironmentVariable = 'NATIVE_SAY_LOOKUP_MARKER';
 const killSignals = new Set(['SIGKILL', 'SIGTERM']);
+const runningPowerShellProcesses = new Map<number, Subprocess>();
 
 let runningPowerShellPid: number | undefined;
 
@@ -33,6 +33,9 @@ export const runPowerShell = async (
 
 	if (options.track) {
 		runningPowerShellPid = subprocess.pid;
+		if (subprocess.pid !== undefined) {
+			runningPowerShellProcesses.set(subprocess.pid, subprocess);
+		}
 	}
 
 	try {
@@ -46,6 +49,10 @@ export const runPowerShell = async (
 
 		throw new Error(result.stderr || `${powershellCommand} exited with code ${result.exitCode ?? 'unknown'}`);
 	} finally {
+		if (options.track && subprocess.pid !== undefined) {
+			runningPowerShellProcesses.delete(subprocess.pid);
+		}
+
 		if (options.track && runningPowerShellPid === subprocess.pid) {
 			runningPowerShellPid = undefined;
 		}
@@ -136,7 +143,22 @@ export const checkIfSayIsRunning = async (): Promise<WindowsSayProcess | undefin
 
 export const killRunningSay = async () => {
 	const sayProcesses = await getRunningSayProcesses();
-	await Promise.all(sayProcesses.map(async sayProcess => fkill(sayProcess.pid, {force: true, silent: true})));
+	for (const sayProcess of sayProcesses) {
+		try {
+			const subprocess = runningPowerShellProcesses.get(sayProcess.pid);
+			if (subprocess) {
+				// Preserve the termination signal reported to the pending say() call on Windows.
+				subprocess.kill();
+			} else {
+				process.kill(sayProcess.pid);
+			}
+		} catch (error) {
+			// Speech may finish between discovering the process and stopping it.
+			if (!(error instanceof Error) || !('code' in error) || error.code !== 'ESRCH') {
+				throw error;
+			}
+		}
+	}
 };
 
 const getRunningSayProcesses = async (): Promise<WindowsSayProcess[]> => {

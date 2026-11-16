@@ -14,7 +14,7 @@ const sayCommand = 'say';
 const audioDeviceLinePattern = /^(?<id>\d+) +(?<name>[^ ].*)$/v;
 const dataFormatPattern = /^(?<format>[a-z]+ +(?<description>[^ ].*))$/v;
 const fileFormatPattern = /^(?<format>[\dA-Za-z]+) +(?<description>(?!\(\.)[^ ]+(?: +(?!\(\.)[^ ]+)*) +\((?<extensions>\.[\da-z]+(?:,\.[\da-z]+)*)\) +\[(?<accFormats>[\da-z]+(?:,[\da-z]+)*)\]$/v;
-const voiceLinePattern = /^(?<name>.+[^ ]) +(?<languageCode>[a-z]{2}_[\dA-Z]{2,}) +# (?<example>.+)$/v;
+const voiceLinePattern = /^(?<name>.+[^ ]) +(?<languageCode>[a-z]{2}_[\dA-Z]{2,}(?:[@_]\S+)?) +# (?<example>.+)$/v;
 const killSignals = new Set(['SIGKILL', 'SIGTERM']);
 
 let runningSayPid: number | undefined;
